@@ -64,7 +64,7 @@ jobs:
         ${{ github.event_name == 'workflow_dispatch' ||
         (steps.file_changes.outputs.common == 'true' ||
         steps.file_changes.outputs.cluster_specific == 'true') }}
-      cluster_matrix: ${{ env.MATRIX }}
+      cluster_matrix: ${{ env.MATRIX || '[]' }}
     # Only run this job if one of the following conditions is true:
     # - The workflow was manually triggered
     # - The event is a push to the master branch
@@ -85,9 +85,12 @@ jobs:
         # Don't run this step when we manually trigger the workflow
         if: github.event_name != 'workflow_dispatch'
         # Action repo: https://github.com/dorny/paths-filter
-        uses: dorny/paths-filter@v2
+        # Fork of the repo above that we use: https://github.com/frouioui/paths-filter/tree/main
+        # In order to take advantage of https://github.com/dorny/paths-filter/pull/133
+        uses: frouioui/paths-filter@main
         id: file_changes
         with:
+          token: ""
           list-files: csv
           filters: |
             common:
@@ -191,7 +194,7 @@ jobs:
     needs: [generate-clusters-to-validate]
     if: |
       needs.generate-clusters-to-validate.outputs.continue_workflow &&
-      needs.generate-clusters-to-validate.outputs.cluster_matrix != '[]'
+      (needs.generate-clusters-to-validate.outputs.cluster_matrix != '[]')
     strategy:
       fail-fast: false
       matrix:

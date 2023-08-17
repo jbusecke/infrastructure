@@ -1,16 +1,19 @@
 jupyterhub:
   singleuser:
+    extraEnv:
+      # Required to get jupyter-contrib-nbextensions to work
+      # See https://github.com/2i2c-org/infrastructure/issues/2380
+      # Upstream issue at https://github.com/Jupyter-contrib/jupyter_nbextensions_configurator/issues/153
+      JUPYTERHUB_SINGLEUSER_APP: "notebook.notebookapp.NotebookApp"
     image:
       name: quay.io/2i2c/utoronto-image
-      tag: "445cbd1f113b"
+      tag: "736072886c54"
   hub:
     config:
       Authenticator:
         admin_users:
-          - 7c76d04b-2a80-4db1-b985-a2d2fa2f708c
-          - 09056164-42f5-4113-9fd7-dd852e63ff1d
-          - adb7ebad-9fb8-481a-bc2c-6c0a8b6de670
-
-      AzureAdOAuthenticator:
-        # Everyone else uses email
-        username_claim: oid
+          - "yuvi.panda@utoronto.ca"
+          - "georgiana.elena@utoronto.ca"
+          - "chris.holdgraf@utoronto.ca"
+          - "davidy.liu@utoronto.ca"
+          - "csadminsundelle@utoronto.ca"

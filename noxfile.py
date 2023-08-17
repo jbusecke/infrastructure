@@ -2,27 +2,32 @@ import nox
 
 nox.options.reuse_existing_virtualenvs = True
 
-BUILD_COMMAND = ["-b", "html", "docs", "docs/_build/html"]
-
-
-def install_deps(session):
-    # Manually installing this because conda is a bit wonky w/ nox
-    session.conda_install("--channel=conda-forge", "go-terraform-docs", "python=3.8")
-    session.install("-r", "docs/requirements.txt")
+BUILD_COMMAND = ["-b", "dirhtml", "docs", "docs/_build/dirhtml"]
 
 
 @nox.session(venv_backend="conda")
 def docs(session):
-    install_deps(session)
-    session.run("sphinx-build", *BUILD_COMMAND)
+    """Build the documentation. Use `-- live` for a live server to preview changes."""
+    session.install("-r", "docs/requirements.txt")
 
+    if "live" in session.posargs:
+        session.posargs.pop(session.posargs.index("live"))
 
-@nox.session(name="docs-live", venv_backend="conda")
-def docs_live(session):
-    install_deps(session)
+        # Add folders to ignore
+        AUTOBUILD_IGNORE = [
+            "_build",
+            "tmp",
+        ]
 
-    cmd = ["sphinx-autobuild"]
-    for path in ["*/_build/*", "*/tmp/*", "*/reference/terraform.md"]:
-        cmd.extend(["--ignore", path])
-    cmd.extend(BUILD_COMMAND)
+        cmd = ["sphinx-autobuild"]
+        for folder in AUTOBUILD_IGNORE:
+            cmd.extend(["--ignore", f"*/{folder}/*"])
+
+        # Find an open port to serve on
+        cmd.extend(["--port", "0"])
+
+    else:
+        cmd = ["sphinx-build"]
+
+    cmd.extend(BUILD_COMMAND + session.posargs)
     session.run(*cmd)

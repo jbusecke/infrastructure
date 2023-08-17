@@ -11,6 +11,8 @@ See the sections below for more details.
 cloud-access.md
 gpu.md
 github.md
+anonymized-usernames.md
+private-nbgitpuller.md
 ```
 
 ```{toctree}
@@ -32,4 +34,18 @@ shared-db.md
 :maxdepth: 2
 :caption: User image
 image.md
+rocker.md
+```
+
+```{toctree}
+:maxdepth: 2
+:caption: Hub Types
+ephemeral.md
+```
+
+```{toctree}
+:maxdepth: 2
+:caption: Other
+dedicated-nodepool.md
+allow-unlisted-profile-choice.md
 ```

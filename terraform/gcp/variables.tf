@@ -23,34 +23,99 @@ variable "project_id" {
   EOT
 }
 
+variable "k8s_version_prefixes" {
+  type = set(string)
+  # Available minor versions are picked from the GKE regular release channel. To
+  # see the available versions see
+  # https://cloud.google.com/kubernetes-engine/docs/release-notes-regular
+  #
+  # This list should list all minor versions available in the regular release
+  # channel, so we may want to remove or add minor versions here over time.
+  #
+  default = [
+    "1.24.",
+    "1.25.",
+    "1.26.",
+    "1.27.",
+    "1.",
+  ]
+  description = <<-EOT
+  A list of k8s version prefixes that can be evaluated to their latest version by
+  the output defined in cluster.tf called regular_channel_latest_k8s_versions.
+
+  For details about release channels (rapid, regular, stable), see:
+  https://cloud.google.com/kubernetes-engine/docs/concepts/release-channels#channels
+  EOT
+}
+
+variable "k8s_versions" {
+  type = object({
+    min_master_version : optional(string, null),
+    core_nodes_version : optional(string, null),
+    notebook_nodes_version : optional(string, null),
+    dask_nodes_version : optional(string, null),
+  })
+  default     = {}
+  description = <<-EOT
+  Configuration of the k8s cluster's version and node pools' versions. To specify these
+
+  - min_master_nodes is passthrough configuration of google_container_cluster's min_master_version, documented in https://registry.terraform.io/providers/hashicorp/google-beta/latest/docs/resources/container_cluster#min_master_version
+  - [core|notebook|dask]_nodes_version is passthrough configuration of container_node_pool's version, documented in https://registry.terraform.io/providers/hashicorp/google-beta/latest/docs/resources/container_node_pool#version
+  EOT
+}
+
 variable "notebook_nodes" {
-  type        = map(object({ min : number, max : number, machine_type : string, labels : map(string), gpu : object({ enabled : bool, type : string, count : number }) }))
+  type = map(object({
+    min : number,
+    max : number,
+    machine_type : string,
+    labels : optional(map(string), {}),
+    taints : optional(list(object({
+      key : string,
+      value : string,
+      effect : string
+    })), [])
+    gpu : optional(
+      object({
+        enabled : optional(bool, false),
+        type : optional(string, ""),
+        count : optional(number, 1)
+      }),
+      {}
+    ),
+    resource_labels : optional(map(string), {}),
+    zones : optional(list(string), [])
+  }))
   description = "Notebook node pools to create"
   default     = {}
 }
 
 variable "dask_nodes" {
-  type        = map(object({ min : number, max : number, machine_type : string, labels : map(string), gpu : object({ enabled : bool, type : string, count : number }) }))
+  type = map(object({
+    min : number,
+    max : number,
+    preemptible : optional(bool, true),
+    machine_type : string,
+    labels : optional(map(string), {}),
+    taints : optional(list(object({
+      key : string,
+      value : string,
+      effect : string
+    })), [])
+    gpu : optional(
+      object({
+        enabled : optional(bool, false),
+        type : optional(string, ""),
+        count : optional(number, 1)
+      }),
+      {}
+    ),
+    resource_labels : optional(map(string), {}),
+    zones : optional(list(string), [])
+  }))
   description = "Dask node pools to create. Defaults to notebook_nodes"
   default     = {}
 }
-
-variable "config_connector_enabled" {
-  type        = bool
-  default     = false
-  description = <<-EOT
-  Enable GKE Config Connector to manage GCP resources via kubernetes.
-
-  GKE Config Connector (https://cloud.google.com/config-connector/docs/overview)
-  allows creating GCP resources (like buckets, VMs, etc) via creating Kubernetes
-  Custom Resources. We use this to create buckets on a per-hub level,
-  and could use it for other purposes in the future.
-
-  Enabling this increases base cost, as config connector related pods
-  needs to run on the cluster.
-  EOT
-}
-
 
 variable "cd_sa_roles" {
   type = set(string)
@@ -75,7 +140,6 @@ variable "cd_sa_roles" {
 
 variable "region" {
   type        = string
-  default     = "us-central1"
   description = <<-EOT
   GCP Region the cluster & resources will be placed in.
 
@@ -106,7 +170,6 @@ variable "regional_cluster" {
 
 variable "zone" {
   type        = string
-  default     = "us-central1-b"
   description = <<-EOT
   GCP Zone the cluster & nodes will be set up in.
 
@@ -118,7 +181,6 @@ variable "zone" {
 
 variable "core_node_machine_type" {
   type        = string
-  default     = "n1-highmem-2"
   description = <<-EOT
   Machine type to use for core nodes.
 
@@ -126,9 +188,8 @@ variable "core_node_machine_type" {
   for a cluster. We should try to run with as few of them
   as possible.
 
-  For single-tenant clusters, a single n1-highmem-2 node seems
-  enough - if network policy and config connector are not on.
-  For others, please experiment to see what fits.
+  For single-tenant clusters, a single n2-highmem-2 node can be
+  enough.
   EOT
 }
 
@@ -164,7 +225,7 @@ variable "enable_network_policy" {
 }
 
 variable "user_buckets" {
-  type        = map(object({ delete_after : number }))
+  type        = map(object({ delete_after : number, extra_admin_members : optional(list(string), []) }))
   default     = {}
   description = <<-EOT
   GCS Buckets to be created.
@@ -172,9 +233,16 @@ variable "user_buckets" {
   The key for each entry will be prefixed with {var.prefix}- to form
   the name of the bucket.
 
-  The value is a map, with 'delete_after' the only accepted key in that
-  map - it lists the number of days after which any content in the
-  bucket will be deleted. Set to null to not delete data.
+  The value is a map, accepting the following keys:
+
+  'delete_after' specifies the number of days after which any content
+  in the bucket will be deleted. Set to null to not delete data.
+
+  'extra_admin_members' describes extra identies (user groups, user accounts,
+  service accounts, etc) that will have *full* access to this bucket. This
+  is primarily useful for moving data into and out of buckets from outside
+  the cloud. See https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/storage_bucket_iam#member/members
+  for the format this would be specified in.
   EOT
 }
 
@@ -282,7 +350,15 @@ variable "max_cpu" {
 }
 
 variable "hub_cloud_permissions" {
-  type        = map(object({ requestor_pays : bool, bucket_admin_access : set(string), hub_namespace : string }))
+  type = map(
+    object({
+      requestor_pays : bool,
+      bucket_admin_access : set(string),
+      bucket_readonly_access : optional(set(string), []),
+      bucket_public_access : optional(set(string), []),
+      hub_namespace : string
+    })
+  )
   default     = {}
   description = <<-EOT
   Map of cloud permissions given to a particular hub
@@ -299,7 +375,7 @@ variable "hub_cloud_permissions" {
 }
 
 variable "container_repos" {
-  type        = list
+  type        = list(any)
   default     = []
   description = <<-EOT
   A list of container repositories to create in Google Artifact Registry to store Docker

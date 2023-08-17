@@ -1,7 +1,7 @@
 (auth:cilogon)=
 # CILogon
 
-[CILogon](https://www.cilogon.org) is a service provider that allows users to login against various identity providers, including campus identity providers. 2i2c can manage CILogon either using the JupyterHub CILogonOAuthenticator or through [auth0](https://auth0.com), similar to Google and GitHub authentication.
+[CILogon](https://www.cilogon.org) is a service provider that allows users to login against various identity providers, including campus identity providers. 2i2c can manage CILogon using the JupyterHub CILogonOAuthenticator.
 
 Some key terms about CILogon authentication worth mentioning:
 
@@ -31,20 +31,20 @@ User account
 
 ## JupyterHub CILogonOAuthenticator
 
-The steps to enable the JupyterHub CILogonOAuthenticator for a hub are simmilar with the ones for enabling [GitHubOAuthenticator](auth:github-orgs):
+The steps to enable the JupyterHub CILogonOAuthenticator for a hub are similar with the ones for enabling [GitHubOAuthenticator](auth:github-orgs):
 
 1. **Create a CILogon OAuth client**
-   This can be achieved by using the [cilogon_app.py](https://github.com/2i2c-org/infrastructure/blob/HEAD/deployer/cilogon_app.py) script.
+   This can be achieved by using the `deployer cilogon-client-create` command.
 
-   - The script needs to be passed the cluster and hub name for which a client id and secret will be generated, but also the hub type, and the authorisation callback URL.
-   - The authorisation callback URL is the homepage url appended with `/hub/oauth_callback`. For example, `staging.2i2c.cloud/hub/oauth_callback`.
+   - The command needs to be passed the cluster and hub name for which a client id and secret will be generated, but also the hub type, and the authorization callback URL.
+   - The hub domain, as specified in `cluster.yaml` (ex: staging.2i2c.cloud).
    - Example script invocation that creates a CILogon OAuth client for the 2i2c dask-staging hub:
       ```bash
-      python3 ./deployer/cilogon_app.py create 2i2c dask-staging daskhub https://dask-staging.2i2c.cloud/hub/oauth_callback
+      deployer cilogon-client-create 2i2c dask-staging daskhub dask-staging.2i2c.cloud
       ```
-   - If successfull, the script will have created a secret values file under `config/clusters/<cluster_name>/enc-<hub_name>.secret.values.yaml`. This file
+   - If successful, the script will have created a secret values file under `config/clusters/<cluster_name>/enc-<hub_name>.secret.values.yaml`. This file
    holds the encrypted OAuth client id and secret that have been created for this hub.
-   - The unecrypted file contents should look like this:
+   - The unencrypted file contents should look like this:
       ```yaml
         jupyterhub:
           hub:
@@ -54,17 +54,7 @@ The steps to enable the JupyterHub CILogonOAuthenticator for a hub are simmilar 
                 client_secret: CLIENT_SECRET
         ```
 
-2. **Set the hub to _not_ configure Auth0 in the `config/clusters/<cluster_name>/cluster.yaml` file.**
-   To ensure the deployer does not provision and configure an OAuth app from Auth0, the following config should be added to the appropriate hub in the cluster's `cluster.yaml` file.
-
-   ```yaml
-   hubs:
-     - name: <hub_name>
-       auth0:
-         enabled: false
-   ```
-
-3. **If not already present, add the secret hub config file to the list of helm chart values file in `config/clusters<cluster_name>/cluster.yaml`.**
+2. **If not already present, add the secret hub config file to the list of helm chart values file in `config/clusters/<cluster_name>/cluster.yaml`.**
    If you created the `enc-<hub_name>.secret.values.yaml` file in step 2, add it the the `cluster.yaml` file like so:
 
    ```yaml
@@ -78,9 +68,9 @@ The steps to enable the JupyterHub CILogonOAuthenticator for a hub are simmilar 
      ...
    ```
 
-4. **Edit the non-secret config under `config/clusters/<cluster_name>/<hub_name>.values.yaml`.**
+3. **Edit the non-secret config under `config/clusters/<cluster_name>/<hub_name>.values.yaml`.**
 
-   4.1. **A few rules of thumb when using this method of authentication:**
+   3.1. **A few rules of thumb when using this method of authentication:**
 
     - The `admin_users` list need to match `allowed_idps` rules too.
 
@@ -98,7 +88,7 @@ The steps to enable the JupyterHub CILogonOAuthenticator for a hub are simmilar 
       You can check the [CILogon scopes section](https://www.cilogon.org/oidc#h.p_PEQXL8QUjsQm) to checkout available values for `username_claim`. This *cannot* be changed afterwards without manual migration of user names, so choose this carefully.
       ```
 
-   4.2. **Most common configurations for 2i2c clusters:**
+   3.2. **Most common configurations for 2i2c clusters:**
 
     1. **Only display specific identity provider as a login options**
 
@@ -136,7 +126,28 @@ The steps to enable the JupyterHub CILogonOAuthenticator for a hub are simmilar 
                         - "2i2c.org"
         ```
 
-    3. **Authenticate using an instutional identity provider for the hub community users and Google for 2i2c staff.**
+    3. **Authenticate using GitHub with CILogon**:
+
+        *This example sets the GitHub nickname as the Hub username using the `username_claim` option*
+        ```yaml
+        jupyterhub:
+          hub:
+            config:
+              JupyterHub:
+                authenticator_class: cilogon
+              CILogonOAuthenticator:
+                scope:
+                  - "profile"
+                oauth_callback_url: https://{{ HUB_DOMAIN }}/hub/oauth_callback
+                shown_idps:
+                  - http://github.com/login/oauth/authorize
+                allowed_idps:
+                  http://github.com/login/oauth/authorize:
+                    username_derivation:
+                      username_claim: "preferred_username"
+        ```
+
+    4. **Authenticate using an institutional identity provider for the hub community users and Google for 2i2c staff.**
 
         This example:
           - only shows Shibboleth, the ANU identity provider, and Google as the possible login options through CILogon
@@ -164,7 +175,7 @@ The steps to enable the JupyterHub CILogonOAuthenticator for a hub are simmilar 
               # Only show the option to login with Google and Shibboleth
               shown_idps:
                 - https://idp2.anu.edu.au/idp/shibboleth
-                - https://accounts.google.com/o/oauth2/auth
+                - http://google.com/accounts/o8/id
               allowed_idps:
                 http://google.com/accounts/o8/id:
                   username_derivation:
@@ -186,64 +197,8 @@ The steps to enable the JupyterHub CILogonOAuthenticator for a hub are simmilar 
    To learn about all the possible config options of the `CILogonOAuthenticator` dict, checkout [the docs](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.cilogon.html#oauthenticator.cilogon.CILogonOAuthenticator.allowed_idps).
    ```
 
-5. Run the deployer as normal to apply the config.
+4. Run the deployer as normal to apply the config.
 
-## CILogon through Auth0
-
-```{seealso}
-See the [CILogon documentation on `Auth0`](https://www.cilogon.org/auth0) for more configuration information.
-```
-
-The steps to enable the CILogon authentication through Auth0 for a hub are:
-
-1. List CILogon as the type of connection we want for a hub, via `auth0.connection` in the `cluster.yaml` file:
-
-   ```yaml
-   auth0:
-      connection: CILogon
-   ```
-
-2. Add **admin users** to the hub by explicitly listing their email addresses. Add **allowed users** for the hub by providing a regex pattern that will match to an institutional email address. (see example below)
-
-  ```{note}
-  Don't forget to allow login to the test user (`deployment-service-check`), otherwise the hub health check performed during deployment will fail.
-  ```
-
-### Example config for CILogon through Auth0
-
-The CILogon connection works by providing users the option to login into a hub using any CILogon Identity Provider of their choice, as long as the email address of the user or the entire organization (e.g. `*@berkeley.edu`) has been provided access into the hub.
-
-The following configuration example shows off how to configure hub admins and allowed users:
-
-1. **Hub admins** are these explicit emails:
-   - one `@campus.edu` user
-   - one `@gmail.com` user
-   - the 2i2c staff (identified through their 2i2c email address)
-
-2. **Allowed users** are matched against a pattern, with a few specific addresses added in as well
-   - all `@2i2c.org` email adresses
-   - all `@campus.edu` email addresses
-   - `user2@gmail.com`
-   - the test username, `deployment-service-check`
-
-```yaml
-jupyterhub:
-  custom:
-    2i2c:
-      add_staff_user_ids_to_admin_users: true
-      add_staff_user_ids_of_type: "google"
-  hub:
-    config:
-      Authenticator:
-        admin_users:
-          - user1@campus.edu
-          - user2@gmail.com
-        username_pattern: '^(.+@2i2c\.org|.+@campus\.edu|user2@gmail\.com|deployment-service-check)$'
-```
-
-```{note}
-All the users listed under `admin_users` need to match the `username_pattern` expression otherwise they won't be allowed to login!
-```
 
 ## Switch Identity Providers or user accounts
 

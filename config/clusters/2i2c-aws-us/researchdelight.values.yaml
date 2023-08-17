@@ -1,0 +1,165 @@
+basehub:
+  userServiceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::790657130469:role/2i2c-aws-us-researchdelight
+  nfs:
+    pv:
+      # from https://docs.aws.amazon.com/efs/latest/ug/mounting-fs-nfs-mount-settings.html
+      mountOptions:
+        - rsize=1048576
+        - wsize=1048576
+        - timeo=600
+        - soft # We pick soft over hard, so NFS lockups don't lead to hung processes
+        - retrans=2
+        - noresvport
+      serverIP: fs-0b70db2b65209a77d.efs.us-west-2.amazonaws.com
+      baseShareName: /
+  jupyterhub:
+    ingress:
+      hosts: [researchdelight.2i2c.cloud]
+      tls:
+        - hosts: [researchdelight.2i2c.cloud]
+          secretName: https-auto-tls
+    custom:
+      2i2c:
+        add_staff_user_ids_to_admin_users: true
+        add_staff_user_ids_of_type: "github"
+      homepage:
+        templateVars:
+          org:
+            name: 2i2c Research Delight
+            url: https://2i2c.org
+            logo_url: https://2i2c.org/media/logo.png
+          designed_by:
+            name: 2i2c
+            url: https://2i2c.org
+          operated_by:
+            name: 2i2c
+            url: https://2i2c.org
+          funded_by:
+            name: 2i2c
+            url: https://2i2c.org
+    hub:
+      config:
+        JupyterHub:
+          authenticator_class: cilogon
+        CILogonOAuthenticator:
+          scope:
+            - "profile"
+          username_claim: "preferred_username"
+          oauth_callback_url: "https://researchdelight.2i2c.cloud/hub/oauth_callback"
+          # Only show the option to login with GitHub
+          shown_idps:
+            - http://github.com/login/oauth/authorize
+    singleuser:
+      image:
+        name: quay.io/2i2c/researchdelight-image
+        tag: "872f0c4578af"
+      profileList:
+        - display_name: "Shared Small: 1-4 CPU, 8-32 GB"
+          description: "A shared machine, the recommended option until you experience a limitation."
+          profile_options: &profile_options
+            image:
+              display_name: Image
+              choices:
+                pangeo:
+                  display_name: Pangeo Notebook
+                  default: true
+                  slug: pangeo
+                  kubespawner_override:
+                    image: pangeo/pangeo-notebook:2023.06.20
+                jupyter-scipy:
+                  display_name: Jupyter SciPy
+                  slug: jupyter-scipy
+                  kubespawner_override:
+                    image: jupyter/scipy-notebook:2023-06-27
+                jupyter-datascience:
+                  display_name: Jupyter DataScience
+                  slug: jupyter-datascience
+                  kubespawner_override:
+                    image: jupyter/datascience-notebook:2023-06-27
+                rocker-geospatial:
+                  display_name: Rocker Geospatial
+                  slug: rocker-geospatial
+                  kubespawner_override:
+                    image: rocker/binder:4.3
+                    # Launch into RStudio after the user logs in
+                    default_url: /rstudio
+                    # Ensures container working dir is homedir
+                    # https://github.com/2i2c-org/infrastructure/issues/2559
+                    working_dir: /home/rstudio
+                    # Because this is a list, it will override our default volume mounts
+                    volume_mounts:
+                      # Mount the user home directory
+                      - name: home
+                        mountPath: /home/rstudio
+                        subPath: "{username}"
+                      # Mount the shared readonly directory
+                      - name: home
+                        mountPath: /home/rstudio/shared
+                        subPath: _shared
+                        readOnly: true
+          kubespawner_override:
+            mem_guarantee: 7.234G
+            cpu_guarantee: 0.1
+            mem_limit: null
+            node_selector:
+              node.kubernetes.io/instance-type: r5.xlarge
+
+        - display_name: "Small: 4 CPU, 32 GB"
+          description: "A dedicated machine for you."
+          profile_options: *profile_options
+          kubespawner_override:
+            mem_guarantee: 28.937G
+            cpu_guarantee: 0.4
+            mem_limit: null
+            node_selector:
+              node.kubernetes.io/instance-type: r5.xlarge
+
+        - display_name: "Medium: 16 CPU, 128 GB"
+          description: "A dedicated machine for you."
+          profile_options: *profile_options
+          kubespawner_override:
+            mem_guarantee: 120.513G
+            cpu_guarantee: 1.6
+            mem_limit: null
+            node_selector:
+              node.kubernetes.io/instance-type: r5.4xlarge
+
+        - display_name: "Large: 64 CPU, 512 GB"
+          description: "A dedicated machine for you"
+          profile_options: *profile_options
+          kubespawner_override:
+            mem_guarantee: 489.13G
+            cpu_guarantee: 6.4
+            mem_limit: null
+            node_selector:
+              node.kubernetes.io/instance-type: r5.16xlarge
+
+        - display_name: NVIDIA Tesla T4, ~16 GB, ~4 CPUs
+          slug: gpu
+          description: "Start a container on a dedicated node with a GPU"
+          profile_options:
+            image:
+              display_name: Image
+              choices:
+                tensorflow:
+                  display_name: Pangeo Tensorflow ML Notebook
+                  slug: "tensorflow"
+                  kubespawner_override:
+                    image: "pangeo/ml-notebook:b9584f6"
+                pytorch:
+                  display_name: Pangeo PyTorch ML Notebook
+                  default: true
+                  slug: "pytorch"
+                  kubespawner_override:
+                    image: "pangeo/pytorch-notebook:b9584f6"
+          kubespawner_override:
+            mem_limit: null
+            environment:
+              NVIDIA_DRIVER_CAPABILITIES: compute,utility
+            mem_guarantee: 14G
+            node_selector:
+              node.kubernetes.io/instance-type: g4dn.xlarge
+            extra_resource_limits:
+              nvidia.com/gpu: "1"

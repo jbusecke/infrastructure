@@ -1,3 +1,4 @@
+(hub-features-summary)=
 # Features available on the hubs
 
 This document is a concise description of various features we can

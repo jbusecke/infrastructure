@@ -1,4 +1,9 @@
 jupyterhub:
+  ingress:
+    hosts: [miracosta.cloudbank.2i2c.cloud]
+    tls:
+      - hosts: [miracosta.cloudbank.2i2c.cloud]
+        secretName: https-auto-tls
   custom:
     2i2c:
       add_staff_user_ids_to_admin_users: true
@@ -24,11 +29,24 @@ jupyterhub:
         authenticator_class: cilogon
       CILogonOAuthenticator:
         oauth_callback_url: https://miracosta.cloudbank.2i2c.cloud/hub/oauth_callback
-        username_claim: email
+        # Only show and allow option to login with Google and Miracosta institutional provider
+        shown_idps:
+          - http://google.com/accounts/o8/id
+          - https://miracosta.fedgw.com/gateway
+          - urn:mace:incommon:berkeley.edu
+        allowed_idps:
+          http://google.com/accounts/o8/id:
+            username_derivation:
+              username_claim: "email"
+            allowed_domains: ["2i2c.org"]
+          https://miracosta.fedgw.com/gateway:
+            username_derivation:
+              username_claim: "email"
+          urn:mace:incommon:berkeley.edu:
+            username_derivation:
+              username_claim: "email"
       Authenticator:
         admin_users:
           - sfirouzian@miracosta.edu
-          - shawnfirouzian@gmail.com
           - ericvd@berkeley.edu
           - sean.smorris@berkeley.edu
-        username_pattern: '^(.+@2i2c\.org|.+@berkeley\.edu|.+@miracosta\.edu|shawnfirouzian@gmail.com|deployment-service-check)$'

@@ -1,4 +1,5 @@
 terraform {
+  required_version = "~> 1.5"
   backend "gcs" {
     # This is a separate GCS bucket than what we use for our other terraform state
     # This is less sensitive, so let's keep it separate
@@ -7,14 +8,16 @@ terraform {
   }
   required_providers {
     google = {
+      # ref: https://registry.terraform.io/providers/hashicorp/google/latest
       source  = "google"
-      version = "4.40.0"
+      version = "~> 4.55"
     }
 
     # Used to decrypt sops encrypted secrets containing PagerDuty keys
     sops = {
+      # ref: https://registry.terraform.io/providers/carlpett/sops/latest
       source  = "carlpett/sops"
-      version = "0.7.1"
+      version = "~> 0.7.2"
     }
   }
 }

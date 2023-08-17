@@ -1,10 +1,17 @@
 name: 2i2c
-provider: gcp
+provider: gcp # https://console.cloud.google.com/kubernetes/clusters/details/us-central1-b/pilot-hubs-cluster/details?project=two-eye-two-see
+tenancy: shared
 gcp:
   key: enc-deployer-credentials.secret.json
   project: two-eye-two-see
   cluster: pilot-hubs-cluster
   zone: us-central1-b
+  billing:
+    paid_by_us: true
+    bigquery:
+      project: two-eye-two-see
+      dataset: cloud_costs
+      billing_id: 0157F7-E3EA8C-25AC3C
 support:
   helm_chart_values_files:
     - support.values.yaml
@@ -14,153 +21,124 @@ hubs:
     display_name: "2i2c staging"
     domain: staging.2i2c.cloud
     helm_chart: basehub
-    auth0:
-      connection: google-oauth2
     helm_chart_values_files:
+      - basehub-common.values.yaml
       - staging.values.yaml
       - enc-staging.secret.values.yaml
+  - name: hackanexoplanet
+    display_name: "ESA Hack An Exoplanet"
+    domain: hackanexoplanet.2i2c.cloud
+    uptime_check:
+      # This is an ephemeral hub, fully password protected with HTTP Basic Auth
+      expected_status: 401
+    helm_chart: basehub
+    helm_chart_values_files:
+      - basehub-common.values.yaml
+      - hackanexoplanet.values.yaml
+      - enc-hackanexoplanet.secret.values.yaml
   - name: dask-staging
     display_name: "2i2c dask staging"
     domain: dask-staging.2i2c.cloud
     helm_chart: daskhub
-    auth0:
-      # connection update? Also ensure the basehub Helm chart is provided a
-      # matching value for jupyterhub.custom.2i2c.add_staff_user_ids_of_type!
-      enabled: false
     helm_chart_values_files:
-      # The order in which you list files here is the order the will be passed
-      # to the helm upgrade command in, and that has meaning. Please check
-      # that you intend for these files to be applied in this order.
-      - enc-dask-staging.secret.values.yaml
+      - daskhub-common.values.yaml
       - dask-staging.values.yaml
+      - enc-dask-staging.secret.values.yaml
   - name: binder-staging
     display_name: "2i2c binder staging"
     domain: binder-staging.2i2c.cloud
     helm_chart: binderhub
-    auth0:
-      # connection update? Also ensure the basehub Helm chart is provided a
-      # matching value for jupyterhub.custom.2i2c.add_staff_user_ids_of_type!
-      enabled: false
     helm_chart_values_files:
       - binder-staging.values.yaml
       - enc-binder-staging.secret.values.yaml
+  - name: imagebuilding-demo
+    display_name: "2i2c image building demo"
+    domain: imagebuilding-demo.2i2c.cloud
+    helm_chart: basehub
+    helm_chart_values_files:
+      - basehub-common.values.yaml
+      - imagebuilding-demo.values.yaml
+      - enc-imagebuilding-demo.secret.values.yaml
   - name: demo
     display_name: "2i2c demo"
     domain: demo.2i2c.cloud
     helm_chart: basehub
-    auth0:
-      enabled: false
     helm_chart_values_files:
-      # The order in which you list files here is the order the will be passed
-      # to the helm upgrade command in, and that has meaning. Please check
-      # that you intend for these files to be applied in this order.
-      - enc-demo.secret.values.yaml
+      - basehub-common.values.yaml
       - demo.values.yaml
+      - enc-demo.secret.values.yaml
   - name: ohw
     display_name: "Ocean Hack Week"
     domain: oceanhackweek.2i2c.cloud
     helm_chart: daskhub
-    auth0:
-      enabled: false
     helm_chart_values_files:
-      # The order in which you list files here is the order the will be passed
-      # to the helm upgrade command in, and that has meaning. Please check
-      # that you intend for these files to be applied in this order.
-      - enc-ohw.secret.values.yaml
+      - daskhub-common.values.yaml
       - ohw.values.yaml
+      - enc-ohw.secret.values.yaml
   - name: pfw
     display_name: "Purdue Fort Wayne"
     domain: pfw.pilot.2i2c.cloud
     helm_chart: basehub
-    auth0:
-      # connection update? Also ensure the basehub Helm chart is provided a
-      # matching value for jupyterhub.custom.2i2c.add_staff_user_ids_of_type!
-      connection: github
     helm_chart_values_files:
-      # The order in which you list files here is the order the will be passed
-      # to the helm upgrade command in, and that has meaning. Please check
-      # that you intend for these files to be applied in this order.
+      - basehub-common.values.yaml
       - pfw.values.yaml
-  - name: peddie
-    display_name: "Peddie Academy"
-    domain: peddie.pilot.2i2c.cloud
-    helm_chart: basehub
-    auth0:
-      # connection update? Also ensure the basehub Helm chart is provided a
-      # matching value for jupyterhub.custom.2i2c.add_staff_user_ids_of_type!
-      connection: google-oauth2
-    helm_chart_values_files:
-      # The order in which you list files here is the order the will be passed
-      # to the helm upgrade command in, and that has meaning. Please check
-      # that you intend for these files to be applied in this order.
-      - peddie.values.yaml
-  - name: catalyst-cooperative
-    display_name: "Catalyst Cooperative"
-    domain: catalyst-cooperative.pilot.2i2c.cloud
-    helm_chart: daskhub
-    auth0:
-      # connection update? Also ensure the basehub Helm chart is provided a
-      # matching value for jupyterhub.custom.2i2c.add_staff_user_ids_of_type!
-      connection: google-oauth2
-    helm_chart_values_files:
-      # The order in which you list files here is the order the will be passed
-      # to the helm upgrade command in, and that has meaning. Please check
-      # that you intend for these files to be applied in this order.
-      - catalyst-cooperative.values.yaml
-  - name: earthlab
-    display_name: "EarthLab"
-    domain: earthlab.pilot.2i2c.cloud
-    helm_chart: basehub
-    auth0:
-      # connection update? Also ensure the basehub Helm chart is provided a
-      # matching value for jupyterhub.custom.2i2c.add_staff_user_ids_of_type!
-      connection: github
-    helm_chart_values_files:
-      # The order in which you list files here is the order the will be passed
-      # to the helm upgrade command in, and that has meaning. Please check
-      # that you intend for these files to be applied in this order.
-      - earthlab.values.yaml
-  - name: paleohack2021
-    display_name: "PaleoHack"
-    domain: paleohack2021.hackathon.2i2c.cloud
-    helm_chart: basehub
-    auth0:
-      # connection update? Also ensure the basehub Helm chart is provided a
-      # matching value for jupyterhub.custom.2i2c.add_staff_user_ids_of_type!
-      connection: github
-    helm_chart_values_files:
-      # The order in which you list files here is the order the will be passed
-      # to the helm upgrade command in, and that has meaning. Please check
-      # that you intend for these files to be applied in this order.
-      - paleohack2021.values.yaml
+      - enc-pfw.secret.values.yaml
   - name: aup
     display_name: "The American University of Paris"
     domain: aup.pilot.2i2c.cloud
     helm_chart: basehub
-    auth0:
-      # connection update? Also ensure the basehub Helm chart is provided a
-      # matching value for jupyterhub.custom.2i2c.add_staff_user_ids_of_type!
-      connection: github
     helm_chart_values_files:
-      # The order in which you list files here is the order the will be passed
-      # to the helm upgrade command in, and that has meaning. Please check
-      # that you intend for these files to be applied in this order.
+      - basehub-common.values.yaml
       - aup.values.yaml
+      - enc-aup.secret.values.yaml
   - name: temple
     display_name: "Temple University"
     domain: temple.2i2c.cloud
     helm_chart: basehub
-    auth0:
-      enabled: false
     helm_chart_values_files:
+      - basehub-common.values.yaml
       - temple.values.yaml
       - enc-temple.secret.values.yaml
   - name: ucmerced
     display_name: "UC Merced"
     domain: ucmerced.2i2c.cloud
     helm_chart: basehub
-    auth0:
-      enabled: false
     helm_chart_values_files:
+      - basehub-common.values.yaml
       - ucmerced.values.yaml
       - enc-ucmerced.secret.values.yaml
+  - name: cosmicds
+    display_name: "Cosmic DS"
+    domain: cosmicds.2i2c.cloud
+    helm_chart: basehub
+    helm_chart_values_files:
+      - basehub-common.values.yaml
+      - cosmicds.values.yaml
+      - enc-cosmicds.secret.values.yaml
+  - name: climatematch
+    display_name: "ClimateMatch"
+    domain: climatematch.2i2c.cloud
+    helm_chart: basehub
+    helm_chart_values_files:
+      - basehub-common.values.yaml
+      - climatematch.values.yaml
+      - enc-climatematch.secret.values.yaml
+  - name: neurohackademy
+    display_name: "Neurohackademy"
+    domain: neurohackademy.2i2c.cloud
+    helm_chart: basehub
+    helm_chart_values_files:
+      # The order in which you list files here is the order the will be passed
+      # to the helm upgrade command in, and that has meaning. Please check
+      # that you intend for these files to be applied in this order.
+      - basehub-common.values.yaml
+      - enc-neurohackademy.secret.values.yaml
+      - neurohackademy.values.yaml
+  - name: mtu
+    display_name: "Michigan Technological University"
+    domain: mtu.2i2c.cloud
+    helm_chart: basehub
+    helm_chart_values_files:
+      - basehub-common.values.yaml
+      - mtu.values.yaml
+      - enc-mtu.secret.values.yaml

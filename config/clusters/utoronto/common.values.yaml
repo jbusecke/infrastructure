@@ -47,6 +47,13 @@ jupyterhub:
               ongoing basis. To reach the support site, please visit: <a href="https://act.utoronto.ca/jupyterhub-support">https://act.utoronto.ca/jupyterhub-support/</a>.
             </div>
   singleuser:
+    cpu:
+      # Each node has about 8 CPUs total, and if we limit users to no more than
+      # 4, no single user can take down a full node by themselves. We have to
+      # set the guarantee to *something*, otherwise it is set to be equal
+      # to the limit!
+      limit: 4
+      guarantee: 0.01
     memory:
       limit: 2G
       guarantee: 1G
@@ -72,14 +79,18 @@ jupyterhub:
     readinessProbe:
       enabled: false
     config:
+      CILogonOAuthenticator:
+        oauth_callback_url: https://r-staging.datatools.utoronto.ca/hub/oauth_callback
+        shown_idps:
+          - https://idpz.utorauth.utoronto.ca/shibboleth
+        allowed_idps:
+          https://idpz.utorauth.utoronto.ca/shibboleth:
+            username_derivation:
+              username_claim: "email"
       Authenticator:
         enable_auth_state: false
       JupyterHub:
-        authenticator_class: azuread
+        authenticator_class: cilogon
         concurrent_spawn_limit: 100
         # We wanna keep logs long term, primarily for analytics
         extra_log_file: /srv/jupyterhub/jupyterhub.log
-      AzureAdOAuthenticator:
-        username_claim: email
-        login_service: "University of Toronto ID"
-        tenant_id: 78aac226-2f03-4b4d-9037-b46d56c55210

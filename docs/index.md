@@ -68,10 +68,13 @@ deployed occasionally as a specific addition.
 :maxdepth: 1
 :caption: How-to guides
 howto/features/index.md
+howto/bill.md
+howto/custom-jupyterhub-image.md
 howto/manage-domains/index.md
 howto/grafana-github-auth.md
 howto/update-env.md
-howto/manual-nfs-setup.md
+howto/upgrade-cluster/index.md
+howto/troubleshoot/index.md
 ```
 
 ## Topic guides
@@ -96,8 +99,8 @@ Reference information about our infrastructure.
 :maxdepth: 1
 
 reference/hubs
+reference/options
 reference/ci-cd/index
-reference/terraform.md
 reference/tools
 ```
 

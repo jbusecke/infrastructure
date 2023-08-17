@@ -3,10 +3,13 @@ basehub:
     annotations:
       iam.gke.io/gcp-service-account: pilot-hubs-ohw@two-eye-two-see.iam.gserviceaccount.com
   jupyterhub:
-    prePuller:
-      continuous:
-        # Todo: turn this off after the event
-        enabled: true
+    ingress:
+      hosts:
+        - oceanhackweek.2i2c.cloud
+      tls:
+        - secretName: https-auto-tls
+          hosts:
+            - oceanhackweek.2i2c.cloud
     singleuser:
       networkPolicy:
         # In clusters with NetworkPolicy enabled, do not
@@ -31,25 +34,28 @@ basehub:
               - port: 22
                 protocol: TCP
       profileList:
-        - display_name: "Python image"
+        - display_name: "Python using JupyterLab"
           description: "~2 CPU, ~8G RAM"
           default: true
           kubespawner_override:
-            image: "ghcr.io/oceanhackweek/python:99b6ab5"
+            image: "ghcr.io/oceanhackweek/python:c3d1f4b"
             default_url: "/lab"
             mem_limit: 8G
             mem_guarantee: 4G
             cpu_limit: 2
             cpu_guarantee: 0.5
-        - display_name: "R image"
+        - display_name: "R using RStudio"
           description: "~2 CPU, ~8G RAM"
           kubespawner_override:
-            image: "ghcr.io/oceanhackweek/r:39ba006"
+            image: "ghcr.io/oceanhackweek/r:2b505d5"
             default_url: "/rstudio"
             mem_limit: 8G
             mem_guarantee: 4G
             cpu_limit: 2
             cpu_guarantee: 0.5
+      extraEnv:
+        GH_SCOPED_CREDS_CLIENT_ID: "Iv1.9c20af442fad0d86"
+        GH_SCOPED_CREDS_APP_URL: "https://github.com/apps/ohw-gh-scoped-creds-app"
     custom:
       cloudResources:
         provider: gcp
@@ -63,9 +69,10 @@ basehub:
       homepage:
         templateVars:
           org:
-            name: Ocean Hack Week
+            name: OceanHackWeek
             logo_url: https://avatars.githubusercontent.com/u/33128979
-            url: https://oceanhackweek.github.io/
+            # logo_url: https://intercoonecta.github.io/_static/OHWe.png
+            url: https://oceanhackweek.org/
           designed_by:
             name: 2i2c
             url: https://2i2c.org
@@ -73,8 +80,8 @@ basehub:
             name: 2i2c
             url: https://2i2c.org
           funded_by:
-            name: 2i2c
-            url: https://2i2c.org
+            name: IOOS
+            url: https://ioos.us/
     hub:
       config:
         JupyterHub:
@@ -82,25 +89,13 @@ basehub:
         GitHubOAuthenticator:
           oauth_callback_url: https://oceanhackweek.2i2c.cloud/hub/oauth_callback
           allowed_organizations:
-            - 2i2c-org:tech-team
-            - oceanhackweek:participants_2022
-            - oceanhackweek:ohw22-organizers
-            - oceanhackweek:ohw22-mentor-helper-presenter
-            - oceanhackweek:participants_2022_northeast
-            - oceanhackweek:participants_2022_northwest
-            - oceanhackweek:participants_2022_southwest
-            - oceanhackweek:participants_2022_australia
-            - oceanhackweek:participants_2022_brazil
-            - oceanhackweek:participants_2022_espanol
-            - oceanhackweek:participants_2022_virtual
-            - oceanhackweek:participants_2022_northwest_undergrad
-            - oceanhackweek:ohw22-organizers-northeast
-            - oceanhackweek:ohw22-organizers-northwest
-            - oceanhackweek:ohw22-organizers-southwest
-            - oceanhackweek:ohw22-organizers-australia
-            - oceanhackweek:ohw22-organizers-brazil
-            - oceanhackweek:ohw22-organizers-espanol
-            - oceanhackweek:ohw22-organizers-virtual
+            - 2i2c-org:hub-access-for-2i2c-staff
+            - oceanhackweek:ohw23-organizers
+            - oceanhackweek:ohw23-participants-australia
+            - oceanhackweek:ohw23-participants-seattle
+            - oceanhackweek:ohw23-participants-virtual
+            - oceanhackweek:ohw23-project-mentors
+            - oceanhackweek:ohw23-tutorial-presenters
           scope:
             - read:org
         Authenticator:

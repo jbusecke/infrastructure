@@ -1,4 +1,11 @@
 jupyterhub:
+  ingress:
+    hosts:
+      - pfw.pilot.2i2c.cloud
+    tls:
+      - secretName: https-auto-tls
+        hosts:
+          - pfw.pilot.2i2c.cloud
   custom:
     2i2c:
       add_staff_user_ids_to_admin_users: true
@@ -18,11 +25,24 @@ jupyterhub:
         funded_by:
           name: JROST & IOI
           url: https://investinopen.org/blog/jrost-rapid-response-fund-awardees
+  singleuser:
+    image:
+      name: quay.io/2i2c/2i2c-hubs-image
+      tag: "14107b8a85fb"
   hub:
     config:
+      JupyterHub:
+        authenticator_class: cilogon
+      CILogonOAuthenticator:
+        scope:
+          - "profile"
+        username_claim: "preferred_username"
+        oauth_callback_url: "https://pfw.pilot.2i2c.cloud/hub/oauth_callback"
+        # Only show the option to login with GitHub
+        shown_idps:
+          - http://github.com/login/oauth/authorize
       Authenticator:
         allowed_users: &pfw_users
-          - colliand
           - alessandromariaselvitella
           - fosterk86
         admin_users: *pfw_users

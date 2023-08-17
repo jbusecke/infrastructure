@@ -1,3 +1,4 @@
+##############################################################################
 # Added by 2i2c
 #
 # To clean up ignored files you can use: git clean -Xfd
@@ -28,6 +29,9 @@ Chart.lock
 # Documentation build assets
 docs/tmp
 docs/reference/terraform.md
+docs/_static/hub-stats.json
+docs/_static/hub-table.json
+docs/_static/hub-options-table.json
 
 # Common editor config
 .vscode
@@ -35,6 +39,10 @@ docs/reference/terraform.md
 # Don't check-in YAML files for eksctl config generated from jsonnet files
 **.eksctl.yaml
 
+# Don't version control any terraform state
+**.terraform.lock.hcl
+
+##############################################################################
 # Python.gitignore below - Add exceptions above for easier maintenance
 # https://github.com/github/gitignore/blob/main/Python.gitignore
 # --------------------------------------------------------------------
@@ -194,3 +202,4 @@ cython_debug/
 
 # osx
 .DS_Store
+

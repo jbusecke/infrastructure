@@ -1,0 +1,10 @@
+jupyterhub:
+  ingress:
+    hosts: [ubc-eoas.2i2c.cloud]
+    tls:
+      - hosts: [ubc-eoas.2i2c.cloud]
+        secretName: https-auto-tls
+  hub:
+    config:
+      CILogonOAuthenticator:
+        oauth_callback_url: https://ubc-eoas.2i2c.cloud/hub/oauth_callback

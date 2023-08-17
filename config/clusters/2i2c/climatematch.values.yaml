@@ -1,0 +1,109 @@
+jupyterhub:
+  # pre-puller is necessary as the image is pretty big, and
+  # pulling during first user spawn might cause timeouts and poor user
+  # experience. Also helps with node pre-warming. This works ok here
+  # because they have a dedicated nodepool.
+  prePuller:
+    continuous:
+      enabled: true
+    hook:
+      enabled: true
+  singleuser:
+    memory:
+      limit: 16G
+      guarantee: 10G
+    nodeSelector:
+      2i2c.org/community: climatematch
+    extraTolerations:
+      - key: "2i2c.org/community"
+        operator: "Equal"
+        value: "climatematch"
+        effect: "NoSchedule"
+    defaultUrl: /lab
+    image:
+      name: wesleyban/climatematch-notebook
+      tag: v0.1
+    # shared-public for collaboration
+    # See https://github.com/2i2c-org/infrastructure/issues/2785
+    storage:
+      extraVolumeMounts:
+        - name: home
+          mountPath: /home/jovyan/shared-public
+          subPath: _shared-public
+          readOnly: false
+        - name: home
+          mountPath: /home/jovyan/shared
+          subPath: _shared
+          readOnly: true
+    initContainers:
+      - name: volume-mount-ownership-fix
+        image: busybox
+        command:
+          [
+            "sh",
+            "-c",
+            "id && chown 1000:1000 /home/jovyan && chown 1000:1000 /home/jovyan/shared && chown 1000:1000 /home/jovyan/shared-public && ls -lhd /home/jovyan ",
+          ]
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+          - name: home
+            mountPath: /home/jovyan
+            subPath: "{username}"
+          # Mounted without readonly attribute here,
+          # so we can chown it appropriately
+          - name: home
+            mountPath: /home/jovyan/shared
+            subPath: _shared
+          - name: home
+            mountPath: /home/jovyan/shared-public
+            subPath: _shared-public
+  ingress:
+    hosts:
+      - climatematch.2i2c.cloud
+    tls:
+      - secretName: https-auto-tls
+        hosts:
+          - climatematch.2i2c.cloud
+  custom:
+    # Extra mount point for admins to access to all users' home dirs
+    # Ref https://2i2c.freshdesk.com/a/tickets/849
+    singleuserAdmin:
+      extraVolumeMounts:
+        - name: home
+          mountPath: /home/jovyan/allusers
+          readOnly: true
+    2i2c:
+      add_staff_user_ids_to_admin_users: true
+      add_staff_user_ids_of_type: "github"
+    homepage:
+      templateVars:
+        org:
+          name: ClimateMatch Academy
+          # Logo copied from https://academy.climatematch.io/
+          logo_url: https://github.com/2i2c-org/infrastructure/assets/3837114/ac3ec52f-1e62-440a-b2bd-8052e5f38897
+          url: https://academy.climatematch.io/
+        designed_by:
+          name: 2i2c
+          url: https://2i2c.org
+        operated_by:
+          name: 2i2c
+          url: https://2i2c.org
+        funded_by:
+          name: ClimateMatch Academy
+          url: https://academy.climatematch.io/
+  hub:
+    config:
+      JupyterHub:
+        authenticator_class: github
+      GitHubOAuthenticator:
+        oauth_callback_url: https://climatematch.2i2c.cloud/hub/oauth_callback
+        allowed_organizations:
+          - 2i2c-org
+          - ClimateMatchAcademy:2023students
+        scope:
+          - read:org
+      Authenticator:
+        admin_users:
+          - WesleyTheGeolien
+          - abodner

@@ -15,12 +15,14 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_copybutton",
     "sphinx_design",
+    "sphinxcontrib.mermaid",
+    "sphinxcontrib.jquery",
 ]
 
 intersphinx_mapping = {
     "z2jh": ("https://zero-to-jupyterhub.readthedocs.io/en/latest/", None),
-    "tc": ("https://team-compass.2i2c.org/en/latest/", None),
-    "dc": ("https://docs.2i2c.org/en/latest/", None),
+    "tc": ("https://team-compass.2i2c.org", None),
+    "dc": ("https://docs.2i2c.org", None),
 }
 
 # -- MyST configuration ---------------------------------------------------
@@ -74,27 +76,9 @@ def setup(app):
 
 
 import subprocess
-from pathlib import Path
 
 # -- Custom scripts -----------------------------------------
-subprocess.run(["python", "scripts/render_hubs.py"])
-
-
-def render_tfdocs():
-    tf_path = Path("../terraform")
-    # Output path is relative to terraform directory
-    output_path = Path("../docs/reference/terraform.md")
-
-    # hub_type for output file is in ../terraform/.terraform-docs.yml
-    subprocess.check_call(
-        [
-            "terraform-docs",
-            "markdown",
-            f"--output-file={output_path}",
-            f'--config={str(tf_path / ".terraform-docs.yml")}',
-            str(tf_path),
-        ]
-    )
-
-
-render_tfdocs()
+subprocess.run(
+    ["python", "helper-programs/generate-general-info-table-about-hubs.py"], check=True
+)
+subprocess.run(["python", "helper-programs/generate-hub-features-table.py"], check=True)

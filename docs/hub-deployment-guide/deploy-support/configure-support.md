@@ -22,6 +22,9 @@ grafana:
   grafana.ini:
     server:
       root_url: https://<grafana-domain>/
+    auth.github:
+      enabled: true
+      allowed_organizations: 2i2c-org
   ingress:
     hosts:
       - <grafana-domain>
@@ -46,12 +49,33 @@ prometheus:
 If you are deploying the support chart on an AWS cluster, you **must** enable the `cluster-autoscaler` sub-chart, otherwise the node groups will not automatically scale.
 Include the following in your `support.values.yaml` file:
 
-```
+```yaml
 cluster-autoscaler:
   enabled: true
   autoDiscovery:
     clusterName: <cluster-name>
   awsRegion: <aws-region>
+```
+````
+
+````{warning}
+If you are deploying the support chart on an Azure cluster, you **must** set an annotation for `ingress-nginx`'s k8s Service resource.
+Include the following in your `support.values.yaml` file:
+
+```yaml
+ingress-nginx:
+  controller:
+    service:
+      annotations:
+        # This annotation is a requirement for use in Azure provided
+        # LoadBalancer.
+        #
+        # ref: https://learn.microsoft.com/en-us/azure/aks/ingress-basic?tabs=azure-cli#basic-configuration
+        # ref: https://github.com/Azure/AKS/blob/master/CHANGELOG.md#release-2022-09-11
+        # ref: https://github.com/Azure/AKS/issues/2907#issuecomment-1109759262
+        # ref: https://github.com/kubernetes/ingress-nginx/issues/8501#issuecomment-1108428615
+        #
+        service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: /healthz
 ```
 ````
 
@@ -72,7 +96,7 @@ Use the `deployer` tool to deploy the support chart to the cluster.
 See [](hubs:manual-deploy) for details on how to setup the tool locally.
 
 ```bash
-deployer deploy-support CLUSTER_NAME
+deployer deploy-support $CLUSTER_NAME
 ```
 
 (deploy-support-chart:dns-records)=
@@ -81,16 +105,22 @@ deployer deploy-support CLUSTER_NAME
 Once the `support` chart has been successfully deployed, retrieve the external IP address for the `ingress-nginx` load balancer.
 
 ```bash
-kubectl --namespace support get svc support-ingress-nginx-controller
+kubectl --namespace=support get service support-ingress-nginx-controller
 ```
 
-Add the following DNS records via Namecheap.com:
+Add DNS records for the `2i2c.cloud` domain [under "Advanced DNS" in
+Namecheap.com](https://ap.www.namecheap.com/Domains/DomainControlPanel/2i2c.cloud/advancedns):
 
-1. `<cluster-name>.2i2c.cloud`, used for the primary hub (if it exists).
-2. `*.<cluster-name>.2i2c.cloud`, for all other hubs, grafana and prometheus
+1. `<cluster-name>.2i2c.cloud.`, used for the primary hub (if it exists).
+2. `*.<cluster-name>.2i2c.cloud.`, for all other hubs, grafana and prometheus
    instances.
 
-The DNS records should be `A` records if using GCP or Azure (where external IP is an
-IPv4 address), or `CNAME` records if using AWS (where external IP is a domain name).
+Use an `A` record when we point to an external IP addresse (GCP, Azure), and a
+`CNAME` record when we point to another domain (AWS).
 
-**Wait a while for the DNS to propagate!**
+```{note}
+It may take a while for this configuration to propagate to all devices making
+DNS lookups. After that, cert-manager needs to do its job to acquire HTTPS
+certificates. And finally, the ingress-nginx server that makes use of the HTTPS
+certificates needs to reload to use the acquired certificates.
+```

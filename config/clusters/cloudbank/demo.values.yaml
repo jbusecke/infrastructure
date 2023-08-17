@@ -1,4 +1,9 @@
 jupyterhub:
+  ingress:
+    hosts: [demo.cloudbank.2i2c.cloud]
+    tls:
+      - hosts: [demo.cloudbank.2i2c.cloud]
+        secretName: https-auto-tls
   prePuller:
     continuous:
       enabled: true
@@ -33,7 +38,16 @@ jupyterhub:
         authenticator_class: cilogon
       CILogonOAuthenticator:
         oauth_callback_url: https://demo.cloudbank.2i2c.cloud/hub/oauth_callback
-        username_claim: email
+        shown_idps:
+          - http://google.com/accounts/o8/id
+          - urn:mace:incommon:berkeley.edu
+        allowed_idps:
+          http://google.com/accounts/o8/id:
+            username_derivation:
+              username_claim: "email"
+          urn:mace:incommon:berkeley.edu:
+            username_derivation:
+              username_claim: "email"
       Authenticator:
         # These folks should still have admin tho
         admin_users:
@@ -44,7 +58,7 @@ jupyterhub:
         # Protects against cryptominers - https://github.com/2i2c-org/infrastructure/issues/1216
         # FIXME: This doesn't account for educational institutions that have emails that don't end in .edu,
         # as is the case for some non-euroamerican universities.
-        username_pattern: '^(.+@2i2c\.org|.+\.edu|kalkeab@gmail.com|deployment-service-check)$'
+        username_pattern: '^(.+@2i2c\.org|.+\.edu|kalkeab@gmail\.com|deployment-service-check)$'
   cull:
     # Cull after 30min of inactivity
     every: 300

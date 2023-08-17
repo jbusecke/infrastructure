@@ -50,22 +50,49 @@ basehub:
             image:
               display_name: Image
               choices:
-                python:
-                  display_name: Trace Python Notebook
-                  default: true
-                  slug: "python"
-                  kubespawner_override:
-                    image: carbonplan/trace-python-notebook:latest
                 main:
                   display_name: Main Single User
                   slug: "main"
                   kubespawner_override:
                     image: carbonplan/main-single-user:latest
-                cmip6:
-                  display_name: CMIP6 Downscaling
-                  slug: "cmip6"
+                benchmark-maps:
+                  display_name: Benchmark Maps
+                  slug: "carbonplan"
                   kubespawner_override:
-                    image: carbonplan/cmip6-downscaling-single-user:latest
+                    # Source: https://github.com/carbonplan/benchmark-maps
+                    image: quay.io/carbonplan/benchmark-maps:latest
+                carbonplan-notebook:
+                  display_name: Carbonplan Notebook
+                  slug: "carbonplan"
+                  kubespawner_override:
+                    # Source: https://github.com/carbonplan/envs
+                    image: quay.io/carbonplan/carbonplan-notebook:latest
+                forest-offset-fires:
+                  display_name: Forest Offset Fires
+                  slug: forest-offset-fires
+                  kubespawner_override:
+                    image: quay.io/carbonplan/forest-offsets-fires:latest
+                tensorflow:
+                  display_name: Pangeo Tensorflow ML Notebook
+                  slug: "tensorflow"
+                  kubespawner_override:
+                    image: "pangeo/ml-notebook:2023.05.08"
+                edge:
+                  display_name: Edge Single User
+                  slug: "edge"
+                  kubespawner_override:
+                    image: "carbonplan/edge-single-user:latest"
+                base-notebook:
+                  display_name: Pangeo Base Notebook
+                  slug: "base-notebook"
+                  kubespawner_override:
+                    image: "pangeo/base-notebook:2023.05.08"
+                pangeo-notebook:
+                  display_name: Pangeo Notebook
+                  default: true
+                  slug: "pangeo-notebook"
+                  kubespawner_override:
+                    image: "pangeo/pangeo-notebook:2023.05.08"
           kubespawner_override:
             # Expllicitly unset mem_limit, so it overrides the default memory limit we set in
             # basehub/values.yaml
@@ -113,12 +140,42 @@ basehub:
             mem_guarantee: 1900G
             node_selector:
               node.kubernetes.io/instance-type: x1.32xlarge
+        - display_name: "GPU"
+          description: |
+            ~4CPUs, Nvidia T4 GPU, 14G of RAM.
+          profile_options:
+            image:
+              display_name: Image
+              choices:
+                tensorflow:
+                  display_name: Pangeo Tensorflow ML Notebook
+                  slug: "tensorflow"
+                  kubespawner_override:
+                    image: "pangeo/ml-notebook:2023.02.27"
+                pytorch:
+                  display_name: Pangeo PyTorch ML Notebook
+                  default: true
+                  slug: "pytorch"
+                  kubespawner_override:
+                    image: "pangeo/pytorch-notebook:2023.02.27"
+                benchmark-maps:
+                  display_name: Benchmark Maps
+                  slug: "carbonplan"
+                  kubespawner_override:
+                    # Source: https://github.com/carbonplan/benchmark-maps
+                    image: quay.io/carbonplan/benchmark-maps:latest
+          kubespawner_override:
+            environment:
+              NVIDIA_DRIVER_CAPABILITIES: compute,utility
+            mem_limit: null
+            extra_resource_limits:
+              nvidia.com/gpu: "1"
+            mem_guarantee: 14G
+            node_selector:
+              node.kubernetes.io/instance-type: g4dn.xlarge
     scheduling:
-      userPlaceholder:
-        enabled: false
-        replicas: 0
       userScheduler:
-        enabled: false
+        enabled: true
     proxy:
       chp:
         resources:
@@ -128,7 +185,6 @@ basehub:
           limits:
             cpu: 1
             memory: 4Gi
-        nodeSelector: {}
     hub:
       resources:
         requests:
@@ -138,16 +194,10 @@ basehub:
           cpu: 1
           memory: 4Gi
       allowNamedServers: true
-      networkPolicy:
-        # FIXME: For dask gateway
-        enabled: false
-      readinessProbe:
-        enabled: false
-      nodeSelector: {}
       config:
         Authenticator:
           allowed_users: &users
-            - jhamman
+            - maxrjones
           admin_users: *users
 
 dask-gateway:

@@ -14,7 +14,7 @@ on:
     - cron: "0 0 * * 1" # Run at 00:00 UTC every Monday
 
 env:
-  team_reviewers: tech-team
+  team_reviewers: engineering
 
 jobs:
   bump-image-tags:
@@ -27,21 +27,16 @@ jobs:
           # For each new config_path to monitor, add a new item in this matrix.
           # The Action can read multiple paths to images, but not multiple config files.
           #
-          # Bump repo2docker image in BinderHub helm chart
-          - name: "BinderHub/repo2docker bump"
-            config_path: "helm-charts/binderhub/values.yaml"
-            images_info: '[{"values_path": ".binderhub.config.BinderHub.build_image"}]'
-
-          # Bump images in openscapes cluster
-          - name: "OpenScapes profiles"
-            config_path: "config/clusters/openscapes/common.values.yaml"
-            # Note: if position of images in profileList changes, update the index in these expressions
-            images_info: '[{"values_path": ".basehub.jupyterhub.singleuser.profileList[0].profile_options.image.choices.python.kubespawner_override.image"}, {"values_path": ".basehub.jupyterhub.singleuser.profileList[0].profile_options.image.choices.rocker.kubespawner_override.image"}, {"values_path": ".basehub.jupyterhub.singleuser.profileList[0].profile_options.image.choices.matlab.kubespawner_override.image"}]'
-
-          # Bump user image for the lis hub
-          - name: "LIS user image bump"
-            config_path: "config/clusters/2i2c-uk/lis.values.yaml"
-            images_info: '[{"values_path": ".jupyterhub.singleuser.image"}]'
+          # Single image: See this example to bump images in the Callysto cluster
+          # - name: "Callysto hub"
+          #   config_path: "config/clusters/callysto/common.values.yaml"
+          #   images_info: '[{"values_path": ".jupyterhub.singleuser.image"}]'
+          #
+          # profileList: See this example to bump images in Openscapes cluster
+          # - name: "OpenScapes profiles"
+          #   config_path: "config/clusters/openscapes/common.values.yaml"
+          #   # Note: if position of images in profileList changes, update the index in these expressions
+          #   images_info: '[{"values_path": ".basehub.jupyterhub.singleuser.profileList[0].profile_options.image.choices.python.kubespawner_override.image"}, {"values_path": ".basehub.jupyterhub.singleuser.profileList[0].profile_options.image.choices.rocker.kubespawner_override.image"}, {"values_path": ".basehub.jupyterhub.singleuser.profileList[0].profile_options.image.choices.matlab.kubespawner_override.image"}]'
 
     steps:
       # We want tests to be run on the Pull Request that gets opened by the next step,
@@ -52,7 +47,7 @@ jobs:
       # Action: https://github.com/marketplace/actions/github-app-token
       - name: Fetch a token from GitHub App
         id: generate_token
-        uses: tibdex/github-app-token@v1.7
+        uses: tibdex/github-app-token@v1.8
         with:
           app_id: ${{ secrets.APP_ID }}
           private_key: ${{ secrets.PRIVATE_KEY }}
@@ -66,4 +61,4 @@ jobs:
           github_token: ${{ steps.generate_token.outputs.token }}
           # team_reviewers: ${{ env.team_reviewers }}
           base_branch: "master"
-          dry_run: ${{ github.event.inputs.dry_run || true}}
+          dry_run: ${{ github.event.inputs.dry_run || false }}

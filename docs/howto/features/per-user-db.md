@@ -63,23 +63,24 @@ jupyterhub:
             [
                 "sh",
                 "-c",
-                "id && chown 1000:1000 /home/jovyan && chown 1000:1000 /home/jovyan/shared-readwrite && chown 1000:1000 /var/lib/postgresql/data && ls -lhd /home/jovyan ",
+                "id && chown 1000:1000 /home/jovyan && chown 1000:1000 /home/jovyan/shared && chown 1000:1000 /var/lib/postgresql/data && ls -lhd /home/jovyan ",
             ]
         securityContext:
             runAsUser: 0
         volumeMounts:
-        - name: home
-          mountPath: /home/jovyan
-          subPath: "{username}"
-        # Here so we can chown it appropriately
-        - name: home
-          mountPath: /home/jovyan/shared-readwrite
-          subPath: _shared
-        - name: postgres-db
-          mountPath: /var/lib/postgresql/data
-          # postgres recommends against mounting a volume directly here
-          # So we put data in a subpath
-          subPath: data
+          - name: home
+            mountPath: /home/jovyan
+            subPath: "{username}"
+          # Mounted without readonly attribute here,
+          # so we can chown it appropriately
+          - name: home
+            mountPath: /home/jovyan/shared
+            subPath: _shared
+          - name: postgres-db
+            mountPath: /var/lib/postgresql/data
+            # postgres recommends against mounting a volume directly here
+            # So we put data in a subpath
+            subPath: data
     storage:
       extraVolumes:
         - name: postgres-db
@@ -111,25 +112,56 @@ jupyterhub:
             memory: 64Mi
             cpu: 0.01
         env:
-        # Configured using the env vars documented in https://hub.docker.com/_/postgres/
-        # Postgres is only listening on localhost, so we can trust all connections that come to it
-        - name: POSTGRES_HOST_AUTH_METHOD
-          value: "trust"
-        # The name of the default user in our user image is jovyan, so the postgresql superuser
-        # should also be called that
-        - name: POSTGRES_USER
-          value: "jovyan"
-        securityContext:
-          runAsUser: 1000
-        volumeMounts:
-        # Mount the user homedirectory in the postgres db container as well, so postgres commands
-        # that load data into the db from disk work
-        - name: home
-          mountPath: /home/jovyan
-          subPath: "{username}"
-        - name: postgres-db
-          mountPath: /var/lib/postgresql/data
-          # postgres recommends against mounting a volume directly here
-          # So we put data in a subpath
-          subPath: data
+          # Configured using the env vars documented in https://hub.docker.com/_/postgres/
+          # Postgres is only listening on localhost, so we can trust all connections that come to it
+          - name: POSTGRES_HOST_AUTH_METHOD
+            value: "trust"
+          # The name of the default user in our user image is jovyan, so the postgresql superuser
+          # should also be called that
+          - name: POSTGRES_USER
+            value: "jovyan"
+          securityContext:
+            runAsUser: 1000
+          volumeMounts:
+          # Mount the user homedirectory in the postgres db container as well, so postgres commands
+          # that load data into the db from disk work
+          - name: home
+            mountPath: /home/jovyan
+            subPath: "{username}"
+          - name: postgres-db
+            mountPath: /var/lib/postgresql/data
+            # postgres recommends against mounting a volume directly here
+            # So we put data in a subpath
+            subPath: data
 ```
+
+## Cleanup created disks after use
+
+If the per-user db is no longer needed, we should cleanup the created disks
+so we are no longer charged for them. Just deleting the Kubernetes PVCs
+created here should delete the underlying disks as well. 
+
+```{warning}
+This is irreversible! Make sure the community is fully aware before doing this
+```
+
+1. Get the list of PVCs created with this feature:
+
+   ```bash
+   kubectl -n <namespace> get pvc -l component=extra-pvc
+   ```
+   
+   Inspect it to make sure you are deleting the PVCs **from the right hub**
+   from the **right cluster**.
+   
+2. Delete the PVCs:
+
+   ```bash
+   kubectl -n <namespace> delete pvc -l component=extra-pvc
+   ```
+   
+   This might take a while. The backing disks will be deleted by Kubernetes as well,
+   once any pods attached to them go down. This means it is safe to run this
+   command while users are currently running - there will be no effects on
+   any running user pods!
+   
